@@ -1,0 +1,160 @@
+---
+title: "Excercise5"
+format: html
+---
+
+# Exercise 5
+
+##Intro
+
+```{r}
+get_age <- function(my_birthday) {
+  #my_birthday <- "1998-10-23"
+  today <- Sys.Date()
+  age <- difftime(today, my_birthday)
+  return(age)
+  }
+
+get_age("1998-10-23")
+  
+```
+
+## Units and Browser
+the same but with units. Units means if it is given out in days, minutes, years etc. 
+
+the browser zooms in into the function and ausführen it with a specific value. 
+it is good to test and debug functions. 
+To exit the browser type "Q"
+```{r}
+get_age <- function(my_birthday, my_units="weeks") {
+  browser()
+  #my_birthday <- "1998-10-23"
+  today <- Sys.Date()
+  age <- difftime(today, my_birthday, units = my_units)
+  return(age)
+  }
+
+get_age("1998-10-23")
+  
+```
+
+
+## Function: BMI
+```{r}
+bmi_function <- function(weight,height) {
+  bmi <- weight/(height)^2
+  return(bmi)
+  }
+
+bmi_function(70,1.75)
+
+```
+
+## Function: Fahrenheit
+```{r}
+degree_function <- function(celsius) {
+  fahrenheit <- celsius*(9/5)+32
+  return(fahrenheit)
+  }
+
+degree_function(32)
+
+```
+
+## Function: Euclidian Distance
+```{r}
+distance_function <- function(x1,x2,y1,y2) {
+  euclid <- sqrt((x2-x1)^2+(y2-y1)^2)
+  return(euclid)
+  }
+
+distance_function(3,4,5,6)
+```
+
+## Wildbore data
+subset of our wild boar data: 
+The individuals Rosa and Sabi for the timespan 01.04.2015 - 15.04.2015
+
+```{r}
+library(readr)
+library("dplyr") # for datetime UTC
+library(ggplot2)
+
+wildbore <- read_csv("wildschwein_BE_2056.csv")
+
+sabi_rosa <- wildbore |>
+    filter(TierName %in% c("Sabi", "Rosa") , DatetimeUTC >= as.POSIXct("2015-04-01", tz="UTC"), DatetimeUTC < as.POSIXct("2015-04-15", tz="UTC"))
+
+# because I used read_CSV it assumes the UTC. then you should specify the local timezone. Therefore, when I type in 2015-04-01 it also shows me the data of 2015-03-31. We have to specify the datetime with DatetimeUTC < as.POSIXct("2015-04-15", tz="UTC")
+
+sabi_rosa
+
+ggplot(sabi_rosa,aes(E,N, color=TierName))+
+  geom_point()+
+  coord_equal()
+```
+
+### create Join Key
+To compare Rosa and Sabi’s locations, we first need to match the two animals temporally. For that we can use a join, but need identical time stamps to serve as a join key. We therefore need to slightly adjust our time stamps to a common, concurrent interval.
+```{r}
+library(lubridate)
+sabi_rosa <-sabi_rosa |> 
+  mutate(Datetime_round= round_date(DatetimeUTC, "15 minutes"))
+#now we have a column with wich i can join my two animals. We need to do this because the data was not perfectly homogenous of the two individuals sabi and Rosa. 
+#other Idea would be the "rolling join" , or interpolation - all very tricky. 
+```
+
+
+### Task 4: Measuring distance at concurrent locations
+```{r}
+sabi <- filter(sabi_rosa, TierName == "Sabi")
+rosa <- filter(sabi_rosa, TierName == "Rosa")
+
+join_sabi_rosa <- full_join(sabi,rosa,by="Datetime_round", suffix= c("_sabi", "_rosa"))
+
+#remember the distance function from the beginning?
+distance_function <- function(x1,x2,y1,y2) {
+  euclid <- sqrt((x2-x1)^2+(y2-y1)^2)
+  return(euclid)
+  }
+
+join_sabi_rosa <- join_sabi_rosa |> 
+  mutate(distance = distance_function(E_sabi,E_rosa,N_sabi,N_rosa),
+         meet = distance < 100 )
+
+#by default, the filter filters the true ones (where the distance is smaller than 100).
+
+ggplot(join_sabi_rosa)+
+  geom_point(aes(E_sabi,N_sabi, color="sabi"))+
+  geom_point(aes(E_rosa, N_rosa, color="rosa"))+
+  geom_point(data=filter(join_sabi_rosa, meet), aes(E_rosa, N_rosa), color="green")+
+  coord_equal()
+
+# instead of using geom_point for meet, we take geom_segment to connect the points where they meet
+plot <- ggplot(join_sabi_rosa)+
+  geom_point(aes(E_sabi,N_sabi, color="sabi"))+
+  geom_point(aes(E_rosa, N_rosa, color="rosa"))+
+  geom_segment(data=filter(join_sabi_rosa, meet), aes(x= E_rosa, y= N_rosa, xend=E_sabi, yend=N_sabi), color="black")+
+  coord_equal()
+
+#to zoom in:
+library(plotly)
+ggplotly(plot)
+
+
+```
+
+### Task 5: Visualize data
+```{r}
+  
+```
+
+### Task 6
+```{r}
+meanmeet <- join_sabi_rosa |> 
+  filter(meet) |> 
+  mutate(
+    E.mean = (E_rosa+ E)
+  )
+
+```
