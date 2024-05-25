@@ -1,5 +1,5 @@
 ---
-title: "Excercise5"
+title: "Excercise5 Laura Vetter"
 format: html
 ---
 
@@ -124,6 +124,13 @@ join_sabi_rosa <- join_sabi_rosa |>
 
 #by default, the filter filters the true ones (where the distance is smaller than 100).
 
+
+
+
+```
+
+### Task 5: Visualize data
+```{r}
 ggplot(join_sabi_rosa)+
   geom_point(aes(E_sabi,N_sabi, color="sabi"))+
   geom_point(aes(E_rosa, N_rosa, color="rosa"))+
@@ -140,21 +147,30 @@ plot <- ggplot(join_sabi_rosa)+
 #to zoom in:
 library(plotly)
 ggplotly(plot)
-
-
 ```
 
-### Task 5: Visualize data
-```{r}
-  
-```
-
-### Task 6
+### Task 6: Plotly in 3D space 
 ```{r}
 meanmeet <- join_sabi_rosa |> 
   filter(meet) |> 
   mutate(
-    E.mean = (E_rosa+ E)
-  )
+    E.mean = (E_rosa+ E_sabi)/2,
+    N.mean = (N_rosa + N_sabi)/2  )
 
+plot3D <- join_sabi_rosa |> 
+  filter(Datetime_round<"2015-04-04") |> 
+  plot_ly(x=~E_rosa,y=~N_rosa, z=~Datetime_round, type="scatter3d", modes="lines") |> 
+  add_trace(join_sabi_rosa, x=~E_sabi, y=~N_sabi, z=~Datetime_round) |> 
+  add_markers(data=meanmeet, x=~E.mean, y=~N.mean, z=~Datetime_round) |> 
+  layout(scene=list(
+    xaxis=list(title="E"),
+    yaxis=list(title="N"),
+    zaxis=list(title="Time")
+  ))
+
+ggplotly(plot3D)
 ```
+
+Error:
+Error in if (has_group(trace)) tryNULL(dplyr::group_vars(dat)) : 
+  missing value where TRUE/FALSE needed
